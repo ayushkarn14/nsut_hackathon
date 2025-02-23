@@ -20,7 +20,7 @@ const Graphs = () => {
       }
 
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://10.100.91.208:5000/patient-data', {
+      const response = await axios.get('http://10.100.93.107:5000/patient-data', {
         headers: {
           'x-access-token': token,
         },

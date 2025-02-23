@@ -1,153 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useHistory } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import '../styles/MedicalHistory.css';
 
 const MedicalHistory = () => {
-    const [medicalHistories, setMedicalHistories] = useState([]);
-    const [diseaseName, setDiseaseName] = useState('');
-    const [durationWeeks, setDurationWeeks] = useState('');
-    const [medication, setMedication] = useState('');
-    const [image, setImage] = useState(null);
-    const history = useHistory();
+    const [medicalHistory, setMedicalHistory] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const handleAddCondition = () => {
-        setMedicalHistories([...medicalHistories, { disease: diseaseName, duration: durationWeeks, medication, image }]);
-        setDiseaseName('');
-        setDurationWeeks('');
-        setMedication('');
-        setImage(null);
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        const formData = new FormData();
-        medicalHistories.forEach((history, index) => {
-            formData.append(`disease_name_${index}`, history.disease || '');
-            formData.append(`duration_weeks_${index}`, history.duration || '');
-            formData.append(`medication_${index}`, history.medication || '');
-            if (history.image) {
-                formData.append(`image_${index}`, history.image);
+    useEffect(() => {
+        const fetchMedicalHistory = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await axios.get('http://10.100.93.107:5000/health-conditions', {
+                    headers: {
+                        'x-access-token': token
+                    }
+                });
+                setMedicalHistory(response.data);
+                setLoading(false);
+            } catch (error) {
+                console.error('Error fetching medical history:', error);
+                toast.error('Failed to load medical history');
+                setLoading(false);
             }
-        });
+        };
 
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.post('http://10.100.91.208:5000/upload', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    'x-access-token': token,
-                },
-            });
-            alert('Files uploaded successfully');
-            console.log('Files uploaded:', response.data);
-            history.push('/login');
-        } catch (error) {
-            console.error('Error uploading files:', error);
-            alert('Error uploading files');
-        }
-    };
+        fetchMedicalHistory();
+    }, []);
 
     return (
-        <div style={styles.container}>
-            <h2 style={styles.heading}>Medical History</h2>
-            <form onSubmit={handleSubmit} style={styles.form}>
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>Disease Name:</label>
-                    <input
-                        type="text"
-                        value={diseaseName}
-                        onChange={(e) => setDiseaseName(e.target.value)}
-                        style={styles.input}
-                    />
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>Duration (weeks):</label>
-                    <input
-                        type="number"
-                        value={durationWeeks}
-                        onChange={(e) => setDurationWeeks(e.target.value)}
-                        style={styles.input}
-                    />
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>Medication:</label>
-                    <input
-                        type="text"
-                        value={medication}
-                        onChange={(e) => setMedication(e.target.value)}
-                        style={styles.input}
-                    />
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>Upload Image:</label>
-                    <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setImage(e.target.files[0])}
-                        style={styles.input}
-                    />
-                </div>
-                <button type="button" onClick={handleAddCondition} style={styles.button}>Add Condition</button>
-                <button type="submit" style={styles.button}>Submit</button>
-            </form>
-            <div>
-                <h3 style={styles.heading}>Added Conditions:</h3>
-                <ul>
-                    {medicalHistories.map((cond, index) => (
-                        <li key={index}>{cond.disease} - {cond.duration} weeks - {cond.medication}</li>
+        <div className="medical-history-container">
+            <h2>Medical History</h2>
+            {loading ? (
+                <div className="loading-spinner">Loading...</div>
+            ) : medicalHistory.length > 0 ? (
+                <div className="medical-history-grid">
+                    {medicalHistory.map((condition, index) => (
+                        <div key={index} className="condition-card">
+                            <h3>{condition.condition_name}</h3>
+                            <div className="condition-details">
+                                <p><strong>Duration:</strong> {condition.duration_weeks} weeks</p>
+                                <p><strong>Medication:</strong> {condition.medication || 'None prescribed'}</p>
+                                <p><strong>Status:</strong> {condition.status}</p>
+                            </div>
+                        </div>
                     ))}
-                </ul>
-            </div>
+                </div>
+            ) : (
+                <div className="no-history">
+                    <p>No medical history records found.</p>
+                </div>
+            )}
         </div>
     );
-};
-
-const styles = {
-    container: {
-        width: '80vw',
-        maxWidth: '400px',
-        margin: '20px auto',
-        background: 'white',
-        borderRadius: '10px',
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
-        padding: '20px',
-        textAlign: 'center',
-    },
-    heading: {
-        marginBottom: '20px',
-        color: '#333',
-    },
-    form: {
-        display: 'flex',
-        flexDirection: 'column',
-    },
-    formGroup: {
-        marginBottom: '15px',
-    },
-    label: {
-        marginBottom: '5px',
-        fontWeight: 'bold',
-        color: '#555',
-    },
-    input: {
-        padding: '10px',
-        border: '1px solid #ddd',
-        borderRadius: '5px',
-        fontSize: '16px',
-        width: '80%',
-    },
-    button: {
-        padding: '10px',
-        backgroundColor: '#84cc19',
-        color: 'white',
-        border: 'none',
-        borderRadius: '5px',
-        fontSize: '16px',
-        cursor: 'pointer',
-        transition: 'background-color 0.3s',
-        marginTop: '10px',
-    },
 };
 
 export default MedicalHistory;

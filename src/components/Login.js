@@ -10,7 +10,7 @@ const Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await axios.post('http://10.100.91.208:5000/login', { email, password });
+            const response = await axios.post('http://10.100.93.107:5000/login', { email, password });
             
             // Store auth data in localStorage
             localStorage.setItem('token', response.data.token);

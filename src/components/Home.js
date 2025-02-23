@@ -3,6 +3,8 @@ import axios from 'axios';
 import StepCounter from './StepCounter';
 import { FaRegClock } from 'react-icons/fa';
 import watchImage from '../resources/watch.png'; // Import the watch image
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Add this function before the Home component
 const getSeverityColor = (severity) => {
@@ -35,7 +37,7 @@ const Home = ({ setDuration, duration }) => {
         const fetchUserData = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const response = await axios.get('http://10.100.91.208:5000/user-data', {
+                const response = await axios.get('http://10.100.93.107:5000/user-data', {
                     headers: {
                         'x-access-token': token,
                     },
@@ -76,10 +78,10 @@ const Home = ({ setDuration, duration }) => {
         try {
             const token = localStorage.getItem('token');
             
-            // If this is the first click and no sync_interval is set
+            // Handle sync interval logic
             if (!isWatchActive && !userData?.sync_interval) {
                 try {
-                    await axios.post('http://10.100.91.208:5000/store-sync-interval', 
+                    await axios.post('http://10.100.93.107:5000/store-sync-interval', 
                         { interval: duration },
                         {
                             headers: {
@@ -87,26 +89,55 @@ const Home = ({ setDuration, duration }) => {
                             },
                         }
                     );
-                    // Store interval in localStorage
                     localStorage.setItem('syncInterval', duration);
                     console.log('Sync interval stored successfully');
                 } catch (error) {
                     console.error('Error storing sync interval:', error);
-                    return; // Don't proceed if storing interval fails
+                    return;
                 }
             }
 
             setIsWatchActive(true);
             
-            const response = await axios.get('http://10.100.93.107:8000/send_full_data');
-            console.log('External API response:', response.data);
+            // Make API calls in sequence since we need heart data for prediction
+            const [fullDataResponse, heartDataResponse] = await Promise.all([
+                axios.get('http://10.100.93.107:8000/send_full_data'),
+                axios.get('http://10.100.93.107:8000/send_heart_data')
+            ]);
 
-            await axios.post('http://10.100.91.208:5000/store-patient-data', response.data, {
+            console.log('Full data response:', fullDataResponse.data);
+            console.log('Heart data response:', heartDataResponse.data);
+
+            // Send heart data to predict endpoint
+            const predictResponse = await axios.post('http://10.100.93.107:8000/predict', heartDataResponse.data);
+            console.log('Prediction response:', predictResponse.data.predicted_label);
+            
+            const predictedLabel = predictResponse.data.predicted_label;
+            if (['S', 'V', 'F'].includes(predictedLabel)) {
+                const labelMap = {
+                    'S': 'Supraventricular ectopic beat',
+                    'V': 'Ventricular ectopic beat',
+                    'F': 'Fusion beat'
+                };
+                
+                toast.warning(`Abnormal Heart Rhythm Detected: ${labelMap[predictedLabel]}`, {
+                    position: "top-right",
+                    autoClose: 5000,
+                    hideProgressBar: false,
+                    closeOnClick: true,
+                    pauseOnHover: true,
+                    draggable: true
+                });
+            }
+
+            // Store the full data in your database
+            await axios.post('http://10.100.93.107:5000/store-patient-data', fullDataResponse.data, {
                 headers: {
                     'x-access-token': token,
                 },
             });
         } catch (error) {
+            toast.error('Error processing heart data');
             console.error('Error:', error);
             if (error.response) {
                 console.error('Error response:', error.response.data);
@@ -147,12 +178,19 @@ const Home = ({ setDuration, duration }) => {
         return () => clearInterval(newIntervalId); // Cleanup interval on component unmount
     }, [duration]);
 
-    // Add this useEffect after your existing useEffects
+    // Modify the fetchSuggestions function in the useEffect
     useEffect(() => {
         const fetchSuggestions = async () => {
             try {
+                // First check localStorage
+                const cachedSuggestions = localStorage.getItem('suggestions');
+                if (cachedSuggestions) {
+                    setSuggestions(JSON.parse(cachedSuggestions));
+                    return;
+                }
+
                 const token = localStorage.getItem('token');
-                const response = await axios.get('http://10.100.91.208:5000/user-data', {
+                const response = await axios.get('http://10.100.93.107:5000/user-data', {
                     headers: {
                         'x-access-token': token,
                     },
@@ -164,6 +202,8 @@ const Home = ({ setDuration, duration }) => {
                 const dummyResponse = await axios.post(endpoint, response.data);
                 console.log('Medical Analysis response:', dummyResponse.data);
 
+                // Store in localStorage
+                localStorage.setItem('suggestions', JSON.stringify(dummyResponse.data));
                 setSuggestions(dummyResponse.data);
             } catch (error) {
                 console.error('Error fetching suggestions:', error);
@@ -179,6 +219,7 @@ const Home = ({ setDuration, duration }) => {
 
     return (
         <>
+            <ToastContainer />
             <div className="graph-container">
                 <h2>Suggestions</h2>
                 {suggestions ? (

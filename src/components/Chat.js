@@ -11,7 +11,7 @@ const Chat = () => {
         const fetchUserDetails = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const response = await axios.get('http://10.100.91.208:5000/user-data-for-context', {
+                const response = await axios.get('http://10.100.93.107:5000/user-data-for-context', {
                     headers: {
                         'x-access-token': token
                     }
@@ -45,7 +45,7 @@ const Chat = () => {
 
     return (<>
         <div className="graph-container chat-container">
-            <h2>Chat with AI Assistant</h2>
+            <h2>Chat with your medical assistant</h2>
 
             {/* Chat input area */}
             <div className="chat-input-container">

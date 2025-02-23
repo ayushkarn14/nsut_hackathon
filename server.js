@@ -15,38 +15,14 @@ app.use(bodyParser.json());
 app.use(cors());
 
 const dbConfig = {
-    host: '10.100.91.208',
+    host: 'localhost',
     user: 'root',
     password: 'password',
-    database: 'health_dashboard'
+    database: 'health_dashboard',
+    connectionLimit: 10 // Adjust the limit as needed
 };
 
-let db;
-
-function handleDisconnect() {
-    db = mysql.createConnection(dbConfig);
-
-    db.connect(err => {
-        if (err) {
-            console.error('Error connecting to the database:', err);
-            setTimeout(handleDisconnect, 2000);
-            return;
-        }
-        console.log('Connected to the database');
-    });
-
-    db.on('error', (err) => {
-        console.error('Database error:', err);
-        if (err.code === 'PROTOCOL_CONNECTION_LOST' ||
-            err.code === 'PROTOCOL_ENQUEUE_AFTER_FATAL_ERROR') {
-            handleDisconnect();
-        } else {
-            throw err;
-        }
-    });
-}
-
-handleDisconnect();
+const pool = mysql.createPool(dbConfig);
 
 const secretKey = 's3cr3tK3yG3n3r4t3dByOp3nSSL==';
 
@@ -68,13 +44,29 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+// Middleware to verify token
+const verifyToken = (req, res, next) => {
+    const token = req.headers['x-access-token'];
+    if (!token) {
+        return res.status(403).send('No token provided');
+    }
+
+    jwt.verify(token, secretKey, (err, decoded) => {
+        if (err) {
+            return res.status(500).send('Failed to authenticate token');
+        }
+        req.userId = decoded.id;
+        next();
+    });
+};
+
 // Signup endpoint
 app.post('/signup', (req, res) => {
     const { name, email, password, age, profession, marital_status, height, weight } = req.body;
     const hashedPassword = bcrypt.hashSync(password, 8);
 
     const query = 'INSERT INTO users (name, email, password, age, profession, marital_status, height, weight) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
-    db.query(query, [name, email, hashedPassword, age, profession, marital_status, height, weight], (err, result) => {
+    pool.query(query, [name, email, hashedPassword, age, profession, marital_status, height, weight], (err, result) => {
         if (err) {
             console.error('Error inserting user:', err);
             return res.status(500).send('Error inserting user');
@@ -95,7 +87,7 @@ app.post('/login', (req, res) => {
     console.log('Login attempt:', { email, password });
 
     const query = 'SELECT * FROM users WHERE email = ?';
-    db.query(query, [email], (err, results) => {
+    pool.query(query, [email], (err, results) => {
         if (err) {
             console.error('Error fetching user:', err);
             return res.status(500).send('Error fetching user');
@@ -120,22 +112,6 @@ app.post('/login', (req, res) => {
     });
 });
 
-// Middleware to verify token
-const verifyToken = (req, res, next) => {
-    const token = req.headers['x-access-token'];
-    if (!token) {
-        return res.status(403).send('No token provided');
-    }
-
-    jwt.verify(token, secretKey, (err, decoded) => {
-        if (err) {
-            return res.status(500).send('Failed to authenticate token');
-        }
-        req.userId = decoded.id;
-        next();
-    });
-};
-
 // Endpoint to handle file uploads
 app.post('/upload', verifyToken, upload.any(), (req, res) => {
     const images = req.files || [];
@@ -153,7 +129,7 @@ app.post('/upload', verifyToken, upload.any(), (req, res) => {
 
     if (healthConditionsValues.length > 0) {
         const healthConditionsQuery = 'INSERT INTO health_conditions (user_id, disease_name, duration_weeks, medication, image_url) VALUES ?';
-        db.query(healthConditionsQuery, [healthConditionsValues], (err, result) => {
+        pool.query(healthConditionsQuery, [healthConditionsValues], (err, result) => {
             if (err) {
                 console.error('Error saving health conditions to database:', err);
                 return res.status(500).send('Error saving health conditions to database');
@@ -174,13 +150,13 @@ app.get('/user-data', verifyToken, (req, res) => {
     const userQuery = 'SELECT age, name, profession, marital_status AS married, height, weight FROM users WHERE id = ?';
     const medicalQuery = 'SELECT disease_name, duration_weeks AS duration, medication AS medication_used, image_url AS supporting_images FROM health_conditions WHERE user_id = ?';
 
-    db.query(userQuery, [userId], (err, userResults) => {
+    pool.query(userQuery, [userId], (err, userResults) => {
         if (err) {
             console.error('Error fetching user data:', err);
             return res.status(500).send('Error fetching user data');
         }
 
-        db.query(medicalQuery, [userId], async (err, medicalResults) => {
+        pool.query(medicalQuery, [userId], async (err, medicalResults) => {
             if (err) {
                 console.error('Error fetching medical data:', err);
                 return res.status(500).send('Error fetching medical data');
@@ -238,7 +214,7 @@ app.post('/store-patient-data', verifyToken, (req, res) => {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    db.query(query, [
+    pool.query(query, [
         patient_id, timestamp, age, gender, weight, height, bmi, heart_rate, bp_systolic, bp_diastolic, spo2, respiration_rate, body_temperature, blood_glucose, activity_level, sleep_pattern
     ], (err, result) => {
         if (err) {
@@ -260,7 +236,7 @@ app.get('/patient-data', verifyToken, (req, res) => {
         LIMIT 20
     `;
 
-    db.query(query, (err, results) => {
+    pool.query(query, (err, results) => {
         if (err) {
             console.error('Error fetching patient data:', err);
             return res.status(500).send('Error fetching patient data');
@@ -273,7 +249,7 @@ app.get('/patient-data', verifyToken, (req, res) => {
 // Protected route example
 app.get('/profile', verifyToken, (req, res) => {
     const query = 'SELECT * FROM users WHERE id = ?';
-    db.query(query, [req.userId], (err, results) => {
+    pool.query(query, [req.userId], (err, results) => {
         if (err) {
             console.error('Error fetching user profile:', err);
             return res.status(500).send('Error fetching user profile');
@@ -281,12 +257,13 @@ app.get('/profile', verifyToken, (req, res) => {
         res.status(200).send(results[0]);
     });
 });
+
 // Add this new endpoint after your existing endpoints
 app.post('/store-sync-interval', verifyToken, (req, res) => {
     const { interval } = req.body;
     const query = 'UPDATE users SET sync_interval = ? WHERE id = ?';
 
-    db.query(query, [interval, req.userId], (err, result) => {
+    pool.query(query, [interval, req.userId], (err, result) => {
         if (err) {
             console.error('Error storing sync interval:', err);
             return res.status(500).send('Error storing sync interval');
@@ -295,32 +272,11 @@ app.post('/store-sync-interval', verifyToken, (req, res) => {
     });
 });
 
-// Add this endpoint after your other endpoints
-app.post('/store-sync-interval', verifyToken, (req, res) => {
-    const { interval } = req.body;
-    const userId = req.userId; // This comes from the verifyToken middleware
-
-    const query = 'UPDATE users SET sync_interval = ? WHERE id = ?';
-
-    db.query(query, [interval, userId], (err, result) => {
-        if (err) {
-            console.error('Error storing sync interval:', err);
-            return res.status(500).send('Error storing sync interval');
-        }
-
-        if (result.affectedRows === 0) {
-            return res.status(404).send('User not found');
-        }
-
-        res.status(200).json({ message: 'Sync interval stored successfully' });
-    });
-});
-
 // Update your existing user-data endpoint to include sync_interval
 app.get('/user-data', verifyToken, (req, res) => {
     const query = 'SELECT id, username, email, sync_interval FROM users WHERE id = ?';
 
-    db.query(query, [req.userId], (err, results) => {
+    pool.query(query, [req.userId], (err, results) => {
         if (err) {
             console.error('Error fetching user data:', err);
             return res.status(500).send('Error fetching user data');
@@ -347,7 +303,7 @@ app.get('/user-data-for-context', verifyToken, (req, res) => {
         FROM users 
         WHERE id = ?`;
 
-    db.query(userQuery, [req.userId], (err, results) => {
+    pool.query(userQuery, [req.userId], (err, results) => {
         if (err) {
             console.error('Error fetching user data:', err);
             return res.status(500).send('Error fetching user data');
@@ -370,6 +326,28 @@ app.get('/user-data-for-context', verifyToken, (req, res) => {
         }
 
         res.status(200).json(contextString);
+    });
+});
+
+app.get('/health-conditions', verifyToken, (req, res) => {
+    const query = `
+        SELECT 
+            disease_name as condition_name,
+            duration_weeks,
+            medication,
+            CURRENT_TIMESTAMP as diagnosed_date,
+            'Active' as status
+        FROM health_conditions 
+        WHERE user_id = ? 
+        ORDER BY duration_weeks DESC
+    `;
+    console.log(req.userId);
+    pool.query(query, [req.userId], (err, results) => {
+        if (err) {
+            console.error('Error fetching health conditions:', err);
+            return res.status(500).send('Error fetching health conditions');
+        }
+        res.status(200).json(results);
     });
 });
 

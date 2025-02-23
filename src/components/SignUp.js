@@ -16,7 +16,7 @@ const SignUp = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await axios.post('http://10.100.91.208:5000/signup', {
+            const response = await axios.post('http://10.100.93.107:5000/signup', {
                 name, email, password, age, profession, marital_status: maritalStatus, height, weight
             });
             localStorage.setItem('token', response.data.token);

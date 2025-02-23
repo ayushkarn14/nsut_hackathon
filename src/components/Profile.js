@@ -11,7 +11,7 @@ const Profile = () => {
         const fetchUserProfile = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const response = await axios.get('http://10.100.91.208:5000/profile', {
+                const response = await axios.get('http://10.100.93.107:5000/profile', {
                     headers: { 'x-access-token': token }
                 });
                 setUser(response.data);
@@ -27,6 +27,7 @@ const Profile = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('syncInterval');
         localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('suggestions'); // Add this line
         history.push('/login');
     };
 
@@ -40,20 +41,16 @@ const Profile = () => {
                     </div>
                     <div className="profile-details">
                         <div className="profile-field">
-                            <label>Name</label>
-                            <p>{user.name}</p>
+                            <p>Name : {user.name}</p>
                         </div>
                         <div className="profile-field">
-                            <label>Age</label>
-                            <p>{user.age} years</p>
+                            <p>Age : {user.age}</p>
                         </div>
                         <div className="profile-field">
-                            <label>Profession</label>
-                            <p>{user.profession}</p>
+                            <p>Profession : {user.profession}</p>
                         </div>
                         <div className="profile-field">
-                            <label>Email</label>
-                            <p>{user.email}</p>
+                            <p>Email : {user.email}</p>
                         </div>
                     </div>
                     <button className="logout-button" onClick={handleLogout}>

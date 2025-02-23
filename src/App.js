@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Switch, NavLink, Redirect } from 'react-router-dom';
 import { FaHome, FaChartLine, FaComments, FaHistory, FaUser } from 'react-icons/fa';
+import { ToastContainer } from 'react-toastify';
 import Home from './components/Home';
 import Graphs from './components/Graphs';
 import Chat from './components/Chat';
@@ -10,6 +11,7 @@ import Login from './components/Login';
 import SignUp from './components/SignUp';
 import axios from 'axios';
 import './styles/App.css';
+import 'react-toastify/dist/ReactToastify.css';
 
 const App = () => {
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -22,7 +24,7 @@ const App = () => {
       const response = await axios.get('http://10.100.93.107:8000/send_full_data');
       console.log('External API response:', response.data);
 
-      await axios.post('http://10.100.91.208:5000/store-patient-data', response.data, {
+      await axios.post('http://10.100.93.107:5000/store-patient-data', response.data, {
         headers: {
           'x-access-token': token,
         },
@@ -58,6 +60,17 @@ const App = () => {
   return (
     <Router>
       <div className="App">
+        <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+        />
         <header className="app-header">
           <h1>Health Dashboard</h1>
         </header>

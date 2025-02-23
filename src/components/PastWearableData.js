@@ -27,7 +27,7 @@ const PastWearableData = ({ medicalHistories }) => {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.post('http://10.100.91.208:5000/upload', formData, {
+            const response = await axios.post('http://10.100.93.107:5000/upload', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                     'x-access-token': token,
