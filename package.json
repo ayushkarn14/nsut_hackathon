@@ -1,28 +1,42 @@
 {
-  "name": "nsut_hackathon",
-  "version": "0.1.0",
-  "private": true,
-  "dependencies": {
-    "@testing-library/dom": "^10.4.0",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.2.0",
-    "@testing-library/user-event": "^13.5.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
-  },
+  "name": "react-dashboard-app",
+  "version": "1.0.0",
+  "description": "A dashboard application to display body vitals including heart rate, temperature, blood oxygen, ECG, and step count.",
+  "main": "index.js",
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "start": "export NODE_OPTIONS=--openssl-legacy-provider && react-scripts start",
+    "build": "export NODE_OPTIONS=--openssl-legacy-provider && react-scripts build",
+    "test": "export NODE_OPTIONS=--openssl-legacy-provider && react-scripts test",
     "eject": "react-scripts eject"
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+  "dependencies": {
+    "axios": "^0.21.4",
+    "bcryptjs": "^3.0.2",
+    "body-parser": "^1.20.3",
+    "chart.js": "^2.9.4",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "mysql": "^2.18.1",
+    "react": "^17.0.2",
+    "react-chartjs-2": "^2.11.2",
+    "react-circular-progressbar": "^2.1.0",
+    "react-dom": "^17.0.2",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^5.3.0",
+    "react-scripts": "4.0.3"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "homepage": "http://10.100.91.208:3000",
+  "bugs": {
+    "url": "https://github.com/yourusername/react-dashboard-app/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/react-dashboard-app.git"
   },
   "browserslist": {
     "production": [
