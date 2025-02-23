@@ -5,6 +5,7 @@ import { ToastContainer } from 'react-toastify';
 import Home from './components/Home';
 import Graphs from './components/Graphs';
 import Chat from './components/Chat';
+import MedicalRecords from './components/MedicalRecords';
 import MedicalHistory from './components/MedicalHistory';
 import Profile from './components/Profile';
 import Login from './components/Login';
@@ -82,6 +83,7 @@ const App = () => {
             {isLoggedIn ? <Graphs /> : <Redirect to="/login" />}
           </Route>
           <Route path="/chat" component={Chat} />
+          <Route path="/medical-record" component={MedicalRecords} />
           <Route path="/medical-history" component={MedicalHistory} />
           <Route path="/profile" component={Profile} />
           <Route path="/login" component={Login} />
@@ -106,7 +108,7 @@ const App = () => {
                 </NavLink>
               </li>
               <li>
-                <NavLink to="/medical-history" activeClassName="active">
+                <NavLink to="/medical-record" activeClassName="active">
                   <FaHistory />
                 </NavLink>
               </li>
